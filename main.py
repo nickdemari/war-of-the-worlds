@@ -539,6 +539,18 @@ while running:
                     player.health -= 15  # More damage from boss attacks
                     if player.health <= 0:
                         game_over = True
+            
+            # Check direct collision with boss
+            if pygame.sprite.collide_rect(player, boss):
+                if not player.power_up:
+                    player.health -= 20  # Even more damage from direct boss collision
+                    if player.health <= 0:
+                        game_over = True
+                    # Bounce player back more forcefully
+                    if player.rect.centerx < boss.rect.centerx:
+                        player.rect.right = boss.rect.left - 10
+                    else:
+                        player.rect.left = boss.rect.right + 10
         
         # Check power-up collisions
         power_hits = pygame.sprite.spritecollide(player, power_ups, True)
@@ -557,6 +569,19 @@ while running:
                     player.health -= 5  # Less damage from regular aliens
                     if player.health <= 0:
                         game_over = True
+        
+        # Check direct collisions between player and aliens
+        alien_collisions = pygame.sprite.spritecollide(player, aliens, False)
+        for alien in alien_collisions:
+            if not player.power_up:
+                player.health -= 10  # More damage from direct collision
+                if player.health <= 0:
+                    game_over = True
+                # Bounce player back slightly
+                if player.rect.centerx < alien.rect.centerx:
+                    player.rect.right = alien.rect.left
+                else:
+                    player.rect.left = alien.rect.right
         
         player.last_health = player.health
     
