@@ -279,8 +279,9 @@ class Player(pygame.sprite.Sprite):
             laser_sound.play()
 
 class Alien(pygame.sprite.Sprite):
-    def __init__(self, level):
+    def __init__(self, level, alien_type="basic"):
         super().__init__()
+        self.alien_type = alien_type
         # Initialize leg angles (120 degrees apart)
         self.leg_angles = [0, 0, 0]  # All legs start at 0
         self.leg_speeds = [2, 2, 2]  # Speed of each leg's movement
@@ -288,16 +289,41 @@ class Alien(pygame.sprite.Sprite):
         self.animation_timer = 0
         self.animation_delay = 2  # Lower number = faster animation
         
-        self.image = create_tripod(self.leg_angles)
+        # Set properties based on alien type
+        if alien_type == "basic":
+            self.image = create_tripod(self.leg_angles)
+            self.speed = random.randint(3 + level, 6 + level)
+            self.health = 2 + (level // 2)
+            self.attack_delay = 120
+            self.damage = 5
+            self.color = (100, 100, 100)
+        elif alien_type == "fast":
+            self.image = create_tripod(self.leg_angles)
+            self.speed = random.randint(6 + level, 9 + level)
+            self.health = 1 + (level // 3)
+            self.attack_delay = 180
+            self.damage = 3
+            self.color = (0, 255, 0)
+        elif alien_type == "tank":
+            self.image = create_tripod(self.leg_angles)
+            self.speed = random.randint(2 + level, 4 + level)
+            self.health = 4 + (level // 2)
+            self.attack_delay = 90
+            self.damage = 8
+            self.color = (128, 128, 128)
+        elif alien_type == "shooter":
+            self.image = create_tripod(self.leg_angles)
+            self.speed = random.randint(2 + level, 4 + level)
+            self.health = 2 + (level // 3)
+            self.attack_delay = 60
+            self.damage = 4
+            self.color = (255, 0, 0)
+        
         self.rect = self.image.get_rect()
         self.rect.right = WINDOW_WIDTH + 50
         self.rect.bottom = WINDOW_HEIGHT - 20
-        # Increase speed and health with level
-        self.speed = random.randint(3 + level, 6 + level)
-        self.health = 2 + (level // 2)  # Every 2 levels, aliens get +1 health
         self.level = level
         self.attack_timer = 0
-        self.attack_delay = 120  # Attack every 2 seconds
         self.lasers = pygame.sprite.Group()
 
     def update(self):
@@ -320,15 +346,25 @@ class Alien(pygame.sprite.Sprite):
         # Update alien image with new leg angles
         self.image = create_tripod(self.leg_angles)
         
-        # Attack pattern
+        # Attack pattern based on alien type
         self.attack_timer += 1
         if self.attack_timer >= self.attack_delay:
             self.attack_timer = 0
-            # Create laser
-            laser = Laser(self.rect.left, self.rect.centery)
-            all_sprites.add(laser)
-            self.lasers.add(laser)
-            laser_sound.play()
+            if self.alien_type == "shooter":
+                # Shooter aliens shoot in a spread pattern
+                for angle in [-30, -15, 0, 15, 30]:
+                    laser = Laser(self.rect.left, self.rect.centery)
+                    laser.speed = 8
+                    laser.angle = angle
+                    all_sprites.add(laser)
+                    self.lasers.add(laser)
+                    laser_sound.play()
+            else:
+                # Other aliens shoot single lasers
+                laser = Laser(self.rect.left, self.rect.centery)
+                all_sprites.add(laser)
+                self.lasers.add(laser)
+                laser_sound.play()
         
         if self.rect.right < 0:
             self.kill()
@@ -463,6 +499,17 @@ def advance_level():
     level_complete = True
     level_complete_timer = 60  # Show level complete message for 1 second
 
+def get_alien_type(level):
+    # Define spawn chances based on level
+    if level < 3:
+        return "basic"
+    elif level < 5:
+        return random.choice(["basic", "fast"])
+    elif level < 7:
+        return random.choice(["basic", "fast", "tank"])
+    else:
+        return random.choice(["basic", "fast", "tank", "shooter"])
+
 # Game loop
 while running:
     # Handle events
@@ -492,7 +539,8 @@ while running:
         spawn_timer += 1
         spawn_delay = max(20, 60 - (player.level * 3))  # Faster spawns per level
         if spawn_timer >= spawn_delay and boss is None:  # Don't spawn regular aliens during boss fight
-            new_alien = Alien(player.level)
+            alien_type = get_alien_type(player.level)
+            new_alien = Alien(player.level, alien_type)
             all_sprites.add(new_alien)
             aliens.add(new_alien)
             spawn_timer = 0
